@@ -25,6 +25,21 @@ public class StaffController {
     @Autowired
     private OcrService ocrService;
 
+    @Autowired
+    private com.trainingcenter.service.UserService userService;
+
+    // Student Management
+    @GetMapping("/students")
+    public ResponseEntity<List<User>> getStudents() {
+        return ResponseEntity.ok(userService.getUsersByRole(User.UserRole.STUDENT));
+    }
+
+    @PostMapping("/students")
+    public ResponseEntity<User> createStudent(@RequestBody User student) {
+        student.setRole(User.UserRole.STUDENT);
+        return ResponseEntity.ok(userService.createUser(student));
+    }
+
     // Registration Management
     @PostMapping("/registrations")
     public ResponseEntity<CourseRegistration> createRegistration(

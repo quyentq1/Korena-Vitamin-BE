@@ -59,6 +59,9 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "expiration_date")
+    private java.time.LocalDate expirationDate;
+
     public enum UserRole {
         ADMIN, STAFF, TEACHER, STUDENT, GUEST, LEARNER, EDUCATION_MANAGER
     }

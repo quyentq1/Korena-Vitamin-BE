@@ -23,6 +23,9 @@ public class ClassService {
     private final ClassTeacherRepository classTeacherRepository;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final ClassScheduleRepository classScheduleRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final LessonQuizRepository lessonQuizRepository;
 
     /**
      * Create new class
@@ -125,6 +128,50 @@ public class ClassService {
         return classStudentRepository.findByClassEntityId(classId);
     }
 
+    public List<ClassEntity> getAllClasses() {
+        return classRepository.findAll();
+    }
+
+    public ClassEntity getClassById(Long id) {
+        return classRepository.findById(id)
+            .orElseThrow(() -> new BadRequestException("Class not found"));
+    }
+
+    @Transactional
+    public ClassEntity updateClass(Long id, ClassEntity classDetails) {
+        ClassEntity classEntity = getClassById(id);
+        
+        classEntity.setClassName(classDetails.getClassName());
+        classEntity.setClassCode(classDetails.getClassCode()); // careful with unique constraint check
+        classEntity.setStartDate(classDetails.getStartDate());
+        classEntity.setEndDate(classDetails.getEndDate());
+        classEntity.setCapacity(classDetails.getCapacity());
+        classEntity.setStatus(classDetails.getStatus());
+        // Handle course change if needed, usually fixed
+        
+        return classRepository.save(classEntity);
+    }
+    
+    public void addStudentToClass(Long classId, Long studentId) {
+        enrollStudent(classId, studentId);
+    }
+
+    public List<User> getStudentsByClass(Long classId) {
+        return getClassStudents(classId).stream()
+                .map(ClassStudent::getStudent)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    public List<ClassTeacher> getClassTeachers(Long classId) {
+        return classTeacherRepository.findByClassEntityId(classId);
+    }
+
+    public List<User> getTeachersByClass(Long classId) {
+        return getClassTeachers(classId).stream()
+                .map(ClassTeacher::getTeacher)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     /**
      * Update class status
      */
@@ -135,5 +182,60 @@ public class ClassService {
 
         classEntity.setStatus(status);
         return classRepository.save(classEntity);
+    }
+
+    // --- Schedule Management ---
+
+    public List<ClassSchedule> getClassSchedules(Long classId) {
+        return classScheduleRepository.findByClassEntityId(classId);
+    }
+
+    @Transactional
+    public ClassSchedule createSchedule(Long classId, ClassSchedule schedule) {
+        ClassEntity classEntity = getClassById(classId);
+        schedule.setClassEntity(classEntity);
+        return classScheduleRepository.save(schedule);
+    }
+
+    // --- Attendance Management ---
+    
+    public List<Attendance> getAttendance(Long scheduleId) {
+        return attendanceRepository.findByScheduleId(scheduleId);
+    }
+
+    // ... existing attendance methods ...
+
+    @Transactional
+    public void markAttendance(Long scheduleId, List<Attendance> attendances) {
+        ClassSchedule schedule = classScheduleRepository.findById(scheduleId)
+             .orElseThrow(() -> new BadRequestException("Schedule not found"));
+        
+        for (Attendance att : attendances) {
+             att.setSchedule(schedule);
+             // Verify student is in class? (Optional but recommended)
+             attendanceRepository.save(att);
+        }
+    }
+
+    // --- Lesson Quiz Management ---
+
+    public List<LessonQuiz> getLessonQuizzes(Long classId) {
+        return lessonQuizRepository.findByClassEntityId(classId);
+    }
+
+    public List<LessonQuiz> getLessonQuizzesByTeacher(Long teacherId) {
+        return lessonQuizRepository.findByCreatedById(teacherId);
+    }
+
+    @Transactional
+    public LessonQuiz createLessonQuiz(Long classId, LessonQuiz quiz, Long teacherId) {
+        ClassEntity classEntity = getClassById(classId);
+        User teacher = userRepository.findById(teacherId)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found"));
+        
+        quiz.setClassEntity(classEntity);
+        quiz.setCreatedBy(teacher);
+        
+        return lessonQuizRepository.save(quiz);
     }
 }
