@@ -39,6 +39,10 @@ public class AuthService {
         User user = userRepository.findByUsername(loginRequest.getUsername())
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
 
+        if (user.getExpirationDate() != null && user.getExpirationDate().isBefore(java.time.LocalDate.now())) {
+            throw new UnauthorizedException("Account has expired");
+        }
+
         return new JwtResponse(
                 jwt,
                 user.getId(),
