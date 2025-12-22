@@ -54,6 +54,10 @@ public class Question {
     @Column(nullable = false)
     private Difficulty difficulty = Difficulty.MEDIUM;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", nullable = false)
+    private VerificationStatus verificationStatus = VerificationStatus.PENDING;
+
     @Column(nullable = false)
     private Boolean active = true;
 
@@ -74,5 +78,9 @@ public class Question {
 
     public enum Difficulty {
         EASY, MEDIUM, HARD
+    }
+
+    public enum VerificationStatus {
+        PENDING, APPROVED, REJECTED
     }
 }

@@ -87,19 +87,35 @@ public class TeacherController {
         return ResponseEntity.ok(questionService.createCategory(category));
     }
 
+    @Autowired
+    private ExamGenerationService examGenerationService;
+
+    @Autowired
+    private QuestionImportService questionImportService;
+
+    @Autowired
+    private ExamAttemptService examAttemptService;
+
+    // ... existing autowired ...
+
+    // Question Import
+    @PostMapping(value = "/questions/import", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<Question>> importQuestions(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            Authentication authentication) {
+        
+        User teacher = userService.getUserByUsername(authentication.getName());
+        return ResponseEntity.ok(questionImportService.importFromExcel(file, teacher.getId()));
+    }
+
     // Exam Management
     @PostMapping("/exams/generate")
     public ResponseEntity<Exam> generateExam(
-            @RequestBody Map<String, Object> request,
+            @RequestBody com.trainingcenter.dto.ExamGenerationRequest request,
             Authentication authentication) {
-        Long courseId = ((Number) request.get("courseId")).longValue();
-        String title = (String) request.get("title");
-        Integer duration = (Integer) request.get("durationMinutes");
-        Map<Long, Integer> criteria = (Map<Long, Integer>) request.get("criteria");
-
+        
         User teacher = userService.getUserByUsername(authentication.getName());
-
-        Exam exam = examService.generateExam(courseId, teacher.getId(), title, duration, criteria);
+        Exam exam = examGenerationService.generateExam(request, teacher.getId());
         return ResponseEntity.ok(exam);
     }
 
@@ -171,5 +187,18 @@ public class TeacherController {
     @GetMapping("/attempts/{id}")
     public ResponseEntity<Map<String, Object>> getAttemptForGrading(@PathVariable Long id) {
         return ResponseEntity.ok(gradingService.getAttemptForGrading(id));
+    }
+    @Autowired
+    private ReportService reportService;
+
+    @GetMapping("/reports/classes")
+    public ResponseEntity<List<Map<String, Object>>> getClassPerformance() {
+        // In real app, pass teacher ID from authentication
+        return ResponseEntity.ok(reportService.getClassPerformance(null));
+    }
+
+    @GetMapping("/reports/top-students")
+    public ResponseEntity<List<Map<String, Object>>> getTopStudents() {
+        return ResponseEntity.ok(reportService.getTopStudents());
     }
 }

@@ -16,6 +16,8 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     List<Question> findByQuestionType(Question.QuestionType questionType);
     List<Question> findByDifficulty(Question.Difficulty difficulty);
     List<Question> findByActive(Boolean active);
+    List<Question> findByVerificationStatus(Question.VerificationStatus verificationStatus);
+    Boolean existsByQuestionText(String questionText);
     List<Question> findByPatternIdAndActive(Long patternId, Boolean active);
     
     @Query("SELECT q FROM Question q WHERE q.category.id = :categoryId AND q.active = true")
