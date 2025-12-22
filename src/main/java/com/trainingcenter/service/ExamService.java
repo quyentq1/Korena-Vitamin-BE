@@ -158,6 +158,12 @@ public class ExamService {
         return examRepository.findByPublished(true);
     }
 
+    public List<Exam> getGuestExams() {
+        return examRepository.findByPublished(true).stream()
+                .limit(2)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     public List<ExamQuestion> getExamQuestions(Long examId) {
         return examQuestionRepository.findByExamIdOrderByQuestionOrder(examId);
     }
