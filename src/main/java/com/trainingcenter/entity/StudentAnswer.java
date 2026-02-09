@@ -40,6 +40,9 @@ public class StudentAnswer {
     @Column(precision = 5, scale = 2)
     private BigDecimal score = BigDecimal.ZERO;
 
+    @Column(name = "feedback", columnDefinition = "TEXT")
+    private String feedback;
+
     @CreationTimestamp
     @Column(name = "answered_at")
     private LocalDateTime answeredAt;

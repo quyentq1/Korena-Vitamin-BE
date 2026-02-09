@@ -1,6 +1,9 @@
 package com.trainingcenter.controller;
 
+import com.trainingcenter.entity.Attendance;
 import com.trainingcenter.entity.ClassEntity;
+import com.trainingcenter.entity.ClassSchedule;
+import com.trainingcenter.entity.LessonQuiz;
 import com.trainingcenter.entity.User;
 import com.trainingcenter.service.ClassService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,14 +20,20 @@ public class ClassController {
 
     @Autowired
     private ClassService classService;
-    
+
     @Autowired
     private com.trainingcenter.service.UserService userService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<ClassEntity> createClass(@RequestBody ClassEntity classEntity) {
-        return ResponseEntity.ok(classService.createClass(classEntity));
+        return ResponseEntity.ok(classService.createClass(
+                classEntity.getCourse().getId(),
+                classEntity.getClassCode(),
+                classEntity.getClassName(),
+                classEntity.getCapacity(),
+                classEntity.getStartDate(),
+                classEntity.getEndDate()));
     }
 
     @PutMapping("/{id}")
@@ -49,7 +58,7 @@ public class ClassController {
         classService.addStudentToClass(id, studentId);
         return ResponseEntity.ok().build();
     }
-    
+
     @GetMapping("/{id}/students")
     public ResponseEntity<List<User>> getClassStudents(@PathVariable Long id) {
         return ResponseEntity.ok(classService.getStudentsByClass(id));
@@ -58,7 +67,7 @@ public class ClassController {
     @PostMapping("/{id}/teachers")
     @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<?> assignTeacherToClass(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestBody Long teacherId,
             @RequestParam(defaultValue = "false") Boolean isPrimary) {
         classService.assignTeacher(id, teacherId, isPrimary);
@@ -107,10 +116,10 @@ public class ClassController {
     @PostMapping("/{id}/quizzes")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ResponseEntity<LessonQuiz> createLessonQuiz(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestBody LessonQuiz quiz,
             org.springframework.security.core.Authentication authentication) {
-        
+
         User teacher = userService.getUserByUsername(authentication.getName());
         return ResponseEntity.ok(classService.createLessonQuiz(id, quiz, teacher.getId()));
     }

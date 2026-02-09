@@ -2,6 +2,7 @@ package com.trainingcenter.service;
 
 import com.trainingcenter.entity.*;
 import com.trainingcenter.exception.BadRequestException;
+import com.trainingcenter.exception.ResourceNotFoundException;
 import com.trainingcenter.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,10 @@ public class ClassService {
      * Create new class
      */
     @Transactional
-    public ClassEntity createClass(Long courseId, String classCode, String className, 
-                                   Integer capacity, LocalDate startDate, LocalDate endDate) {
+    public ClassEntity createClass(Long courseId, String classCode, String className,
+            Integer capacity, LocalDate startDate, LocalDate endDate) {
         Course course = courseRepository.findById(courseId)
-            .orElseThrow(() -> new BadRequestException("Course not found"));
+                .orElseThrow(() -> new BadRequestException("Course not found"));
 
         // Check if class code already exists
         if (classRepository.findByClassCode(classCode).isPresent()) {
@@ -61,14 +62,14 @@ public class ClassService {
     @Transactional
     public ClassStudent enrollStudent(Long classId, Long studentId) {
         ClassEntity classEntity = classRepository.findById(classId)
-            .orElseThrow(() -> new BadRequestException("Class not found"));
+                .orElseThrow(() -> new BadRequestException("Class not found"));
 
         User student = userRepository.findById(studentId)
-            .orElseThrow(() -> new BadRequestException("Student not found"));
+                .orElseThrow(() -> new BadRequestException("Student not found"));
 
         // Validate student role
-        if (student.getRole() != User.UserRole.STUDENT && 
-            student.getRole() != User.UserRole.LEARNER) {
+        if (student.getRole() != User.UserRole.STUDENT &&
+                student.getRole() != User.UserRole.LEARNER) {
             throw new BadRequestException("User must be STUDENT or LEARNER role");
         }
 
@@ -103,10 +104,10 @@ public class ClassService {
     @Transactional
     public ClassTeacher assignTeacher(Long classId, Long teacherId, Boolean isPrimary) {
         ClassEntity classEntity = classRepository.findById(classId)
-            .orElseThrow(() -> new BadRequestException("Class not found"));
+                .orElseThrow(() -> new BadRequestException("Class not found"));
 
         User teacher = userRepository.findById(teacherId)
-            .orElseThrow(() -> new BadRequestException("Teacher not found"));
+                .orElseThrow(() -> new BadRequestException("Teacher not found"));
 
         if (teacher.getRole() != User.UserRole.TEACHER) {
             throw new BadRequestException("User must have TEACHER role");
@@ -134,13 +135,13 @@ public class ClassService {
 
     public ClassEntity getClassById(Long id) {
         return classRepository.findById(id)
-            .orElseThrow(() -> new BadRequestException("Class not found"));
+                .orElseThrow(() -> new BadRequestException("Class not found"));
     }
 
     @Transactional
     public ClassEntity updateClass(Long id, ClassEntity classDetails) {
         ClassEntity classEntity = getClassById(id);
-        
+
         classEntity.setClassName(classDetails.getClassName());
         classEntity.setClassCode(classDetails.getClassCode()); // careful with unique constraint check
         classEntity.setStartDate(classDetails.getStartDate());
@@ -148,10 +149,10 @@ public class ClassService {
         classEntity.setCapacity(classDetails.getCapacity());
         classEntity.setStatus(classDetails.getStatus());
         // Handle course change if needed, usually fixed
-        
+
         return classRepository.save(classEntity);
     }
-    
+
     public void addStudentToClass(Long classId, Long studentId) {
         enrollStudent(classId, studentId);
     }
@@ -178,7 +179,7 @@ public class ClassService {
     @Transactional
     public ClassEntity updateClassStatus(Long classId, ClassEntity.ClassStatus status) {
         ClassEntity classEntity = classRepository.findById(classId)
-            .orElseThrow(() -> new BadRequestException("Class not found"));
+                .orElseThrow(() -> new BadRequestException("Class not found"));
 
         classEntity.setStatus(status);
         return classRepository.save(classEntity);
@@ -198,7 +199,7 @@ public class ClassService {
     }
 
     // --- Attendance Management ---
-    
+
     public List<Attendance> getAttendance(Long scheduleId) {
         return attendanceRepository.findByScheduleId(scheduleId);
     }
@@ -208,12 +209,12 @@ public class ClassService {
     @Transactional
     public void markAttendance(Long scheduleId, List<Attendance> attendances) {
         ClassSchedule schedule = classScheduleRepository.findById(scheduleId)
-             .orElseThrow(() -> new BadRequestException("Schedule not found"));
-        
+                .orElseThrow(() -> new BadRequestException("Schedule not found"));
+
         for (Attendance att : attendances) {
-             att.setSchedule(schedule);
-             // Verify student is in class? (Optional but recommended)
-             attendanceRepository.save(att);
+            att.setSchedule(schedule);
+            // Verify student is in class? (Optional but recommended)
+            attendanceRepository.save(att);
         }
     }
 
@@ -232,10 +233,10 @@ public class ClassService {
         ClassEntity classEntity = getClassById(classId);
         User teacher = userRepository.findById(teacherId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not found"));
-        
+
         quiz.setClassEntity(classEntity);
         quiz.setCreatedBy(teacher);
-        
+
         return lessonQuizRepository.save(quiz);
     }
 }
