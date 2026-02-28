@@ -60,13 +60,19 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Auth endpoints - no token required
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/auth/**").permitAll()
+                        // BUG-02 FIX: Public endpoints — Guest (no token) can access
+                        .requestMatchers("/public/**").permitAll()
+                        .requestMatchers("/guest/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/courses/public/**").permitAll()
+                        // Role-guarded endpoints
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/staff/**").hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers("/teacher/**").hasAnyRole("TEACHER", "ADMIN")
                         .requestMatchers("/student/**").hasAnyRole("STUDENT", "ADMIN")
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
