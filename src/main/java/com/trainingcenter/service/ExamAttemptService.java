@@ -40,42 +40,39 @@ public class ExamAttemptService {
     @Autowired
     private jakarta.servlet.http.HttpServletRequest request;
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     public ExamAttempt startExam(Long examId, Long studentId) {
         String clientIp = request.getRemoteAddr();
 
         // 1. Guest Logic (No Student ID)
+        GuestAccessControl guestAccess = null; // track for post-save increment
         if (studentId == null) {
-            GuestAccessControl access = guestAccessRepository.findById(clientIp)
+            guestAccess = guestAccessRepository.findById(clientIp)
                     .orElse(new GuestAccessControl(clientIp, 0, LocalDateTime.now()));
 
-            if (access.getAttemptCount() >= 2) {
-                throw new BadRequestException("LIMIT_EXCEEDED: You have used all your free guest tests (2/2). Please upgrade.");
+            if (guestAccess.getAttemptCount() >= 2) {
+                throw new BadRequestException(
+                        "LIMIT_EXCEEDED: You have used all your free guest tests (2/2). Please upgrade.");
             }
 
-            access.setAttemptCount(access.getAttemptCount() + 1);
-            guestAccessRepository.save(access);
-            
-            // For guest, we might create a temporary "Guest" user or handle null student in ExamAttempt
-            // Ideally, ExamAttempt.student should be nullable or mapped to a generic Guest
-            // For now, assuming we proceed without a User entity for Guest, or fetch a dummy "GUEST" user
-            // To be safe and minimal: We will REQUIRE a valid User for ExamAttempt foreign key in current DB design.
-            // If DB requires User, we can't insert null. 
-            // Workaround: We return a "Mock" attempt object that isn't saved to DB? 
-            // OR: We have a pre-seeded "GUEST_USER" in DB. Let's assume there is one or creating one.
-            // For this task, strict requirement is "Guest" mode. 
-            
-            // Let's modify to find/create a temporary GUEST user for the record
+            // NOTE: We do NOT increment counter here.
+            // Counter is incremented AFTER the attempt is saved successfully to avoid
+            // consuming quota on failed requests.
+
+            // Find or create a temporary GUEST user tied to this IP
             User guestUser = userRepository.findByUsername("guest_" + clientIp)
                     .orElseGet(() -> {
-                         User u = new User();
-                         u.setUsername("guest_" + clientIp);
-                         u.setPassword("guest");
-                         u.setFullName("Guest " + clientIp);
-                         u.setRole(User.UserRole.GUEST);
-                         u.setEmail("guest_" + clientIp + "@temp.com");
-                         return userRepository.save(u);
+                        User u = new User();
+                        u.setUsername("guest_" + clientIp);
+                        u.setPassword("guest");
+                        u.setFullName("Guest " + clientIp);
+                        u.setRole(User.UserRole.GUEST);
+                        u.setEmail("guest_" + clientIp + "@temp.com");
+                        return userRepository.save(u);
                     });
-             studentId = guestUser.getId();
+            studentId = guestUser.getId();
         }
 
         Exam exam = examRepository.findById(examId)
@@ -89,28 +86,38 @@ public class ExamAttemptService {
         }
 
         // Check if student already has an in-progress attempt
-        attemptRepository.findByStudentAndExamAndStatus(
-                student, exam, ExamAttempt.AttemptStatus.IN_PROGRESS
-        ).ifPresent(attempt -> {
-            throw new BadRequestException("You already have an in-progress attempt for this exam");
-        });
+        java.util.Optional<ExamAttempt> existingAttempt = attemptRepository.findByStudentAndExamAndStatus(
+                student, exam, ExamAttempt.AttemptStatus.IN_PROGRESS);
+
+        if (existingAttempt.isPresent()) {
+            if (student.getRole() == User.UserRole.GUEST) {
+                // For guest: resume the existing attempt instead of blocking
+                return existingAttempt.get();
+            } else {
+                // For logged-in users: strict block to avoid duplicates
+                throw new BadRequestException("You already have an in-progress attempt for this exam");
+            }
+        }
 
         // Type 1 & 2 Logic: Check Access (For non-guest / logged in users)
-        // If it was a guest (converted to temp user above), they are GUEST role, so we skip premium check 
+        // If it was a guest (converted to temp user above), they are GUEST role, so we
+        // skip premium check
         // because we already checked IP limit.
         // Type 1 & 2 Logic: Check Access (For non-guest / logged in users)
-        // If it was a guest (converted to temp user above), they are GUEST role, so we skip premium check 
+        // If it was a guest (converted to temp user above), they are GUEST role, so we
+        // skip premium check
         // because we already checked IP limit.
-        // STUDENT role gets unlimited attempts. LEARNER role is subject to limits unless premium.
-        if (student.getRole() != User.UserRole.GUEST && 
-            student.getRole() != User.UserRole.STUDENT && 
-            !student.getIsPremium()) {
-             if (student.getFreeTestCount() > 0) {
-                 student.setFreeTestCount(student.getFreeTestCount() - 1);
-                 userRepository.save(student);
-             } else {
-                 throw new BadRequestException("You have used all your free tests. Please upgrade.");
-             }
+        // STUDENT role gets unlimited attempts. LEARNER role is subject to limits
+        // unless premium.
+        if (student.getRole() != User.UserRole.GUEST &&
+                student.getRole() != User.UserRole.STUDENT &&
+                !student.getIsPremium()) {
+            if (student.getFreeTestCount() > 0) {
+                student.setFreeTestCount(student.getFreeTestCount() - 1);
+                userRepository.save(student);
+            } else {
+                throw new BadRequestException("You have used all your free tests. Please upgrade.");
+            }
         }
 
         ExamAttempt attempt = new ExamAttempt();
@@ -120,7 +127,15 @@ public class ExamAttemptService {
         attempt.setEndTime(LocalDateTime.now().plusMinutes(exam.getDurationMinutes()));
         attempt.setStatus(ExamAttempt.AttemptStatus.IN_PROGRESS);
 
-        return attemptRepository.save(attempt);
+        ExamAttempt saved = attemptRepository.save(attempt);
+
+        // Increment guest attempt counter AFTER successful save
+        if (guestAccess != null) {
+            guestAccess.setAttemptCount(guestAccess.getAttemptCount() + 1);
+            entityManager.merge(guestAccess);
+        }
+
+        return saved;
     }
 
     public StudentAnswer submitAnswer(Long attemptId, Long examQuestionId, String answerText, String answerFileUrl) {
@@ -259,24 +274,24 @@ public class ExamAttemptService {
     @Transactional
     public void submitManualGrade(Long attemptId, List<StudentAnswer> gradedAnswers) {
         ExamAttempt attempt = getAttemptById(attemptId);
-        
+
         BigDecimal totalAscScore = attempt.getAutoScore() != null ? attempt.getAutoScore() : BigDecimal.ZERO;
         BigDecimal manualScore = BigDecimal.ZERO;
 
         for (StudentAnswer graded : gradedAnswers) {
             StudentAnswer answer = answerRepository.findById(graded.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Answer not found"));
-            
+
             // Update score and feedback
-            // Ensure we don't overwrite auto-graded ones if mixed? 
+            // Ensure we don't overwrite auto-graded ones if mixed?
             // Usually manual grading is for Essay/Speaking which have 0 auto score.
-            
+
             answer.setScore(graded.getScore());
             answer.setFeedback(graded.getFeedback());
             answer.setIsCorrect(graded.getScore().compareTo(BigDecimal.ZERO) > 0);
-            
+
             answerRepository.save(answer);
-            
+
             if (graded.getScore() != null) {
                 manualScore = manualScore.add(graded.getScore());
             }
