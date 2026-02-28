@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/student")
+@RequestMapping("/student")
 @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
 public class StudentController {
 
@@ -62,8 +62,7 @@ public class StudentController {
         String answerFileUrl = (String) request.get("answerFileUrl");
 
         return ResponseEntity.ok(attemptService.submitAnswer(
-                id, examQuestionId, answerText, answerFileUrl
-        ));
+                id, examQuestionId, answerText, answerFileUrl));
     }
 
     @PostMapping("/attempts/{id}/submit")
@@ -86,8 +85,7 @@ public class StudentController {
         return ResponseEntity.ok(Map.of(
                 "attempt", attempt,
                 "answers", answers,
-                "exam", attempt.getExam()
-        ));
+                "exam", attempt.getExam()));
     }
 
     @GetMapping("/attempts/{id}")
