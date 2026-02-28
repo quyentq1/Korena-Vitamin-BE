@@ -15,13 +15,13 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/manager")
+@RequestMapping("/manager")
 @PreAuthorize("hasRole('ADMIN')") // Should be MANAGER role, using ADMIN for now implies Manager
 public class ManagerController {
 
     @Autowired
     private QuestionRepository questionRepository;
-    
+
     @Autowired
     private QuestionService questionService;
 
@@ -53,7 +53,7 @@ public class ManagerController {
     }
 
     // --- Duplicate Check ---
-    
+
     @PostMapping("/questions/check-duplicate")
     public ResponseEntity<?> checkDuplicate(@RequestBody Map<String, String> request) {
         String newText = request.get("text");

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/teacher")
+@RequestMapping("/teacher")
 @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
 public class TeacherController {
 
@@ -103,7 +103,7 @@ public class TeacherController {
     public ResponseEntity<List<Question>> importQuestions(
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
             Authentication authentication) {
-        
+
         User teacher = userService.getUserByUsername(authentication.getName());
         return ResponseEntity.ok(questionImportService.importFromExcel(file, teacher.getId()));
     }
@@ -113,7 +113,7 @@ public class TeacherController {
     public ResponseEntity<Exam> generateExam(
             @RequestBody com.trainingcenter.dto.ExamGenerationRequest request,
             Authentication authentication) {
-        
+
         User teacher = userService.getUserByUsername(authentication.getName());
         Exam exam = examGenerationService.generateExam(request, teacher.getId());
         return ResponseEntity.ok(exam);
@@ -180,14 +180,14 @@ public class TeacherController {
         User teacher = userService.getUserByUsername(authentication.getName());
 
         return ResponseEntity.ok(gradingService.submitManualGrade(
-                attemptId, examQuestionId, teacher.getId(), score, feedback
-        ));
+                attemptId, examQuestionId, teacher.getId(), score, feedback));
     }
 
     @GetMapping("/attempts/{id}")
     public ResponseEntity<Map<String, Object>> getAttemptForGrading(@PathVariable Long id) {
         return ResponseEntity.ok(gradingService.getAttemptForGrading(id));
     }
+
     @Autowired
     private ReportService reportService;
 

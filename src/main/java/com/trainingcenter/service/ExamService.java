@@ -8,11 +8,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.util.*;
 
 @Service
 @Transactional
 public class ExamService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Autowired
     private ExamRepository examRepository;
@@ -34,7 +39,7 @@ public class ExamService {
      * criteriaMap example: {categoryId: numberOfQuestions}
      */
     public Exam generateExam(Long courseId, Long createdBy, String title, Integer durationMinutes,
-                              Map<Long, Integer> criteriaMap) {
+            Map<Long, Integer> criteriaMap) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
 
@@ -151,17 +156,32 @@ public class ExamService {
     public List<Exam> getExamsByCourse(Long courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
-        return examRepository.findByCourse(course);
+        List<Exam> exams = examRepository.findByCourse(course);
+        for (Exam exam : exams) {
+            entityManager.detach(exam);
+            exam.setExamQuestions(null);
+        }
+        return exams;
     }
 
     public List<Exam> getPublishedExams() {
-        return examRepository.findByPublished(true);
+        List<Exam> exams = examRepository.findByPublished(true);
+        for (Exam exam : exams) {
+            entityManager.detach(exam);
+            exam.setExamQuestions(null);
+        }
+        return exams;
     }
 
     public List<Exam> getGuestExams() {
-        return examRepository.findByPublished(true).stream()
+        List<Exam> exams = examRepository.findByPublished(true).stream()
                 .limit(2)
                 .collect(java.util.stream.Collectors.toList());
+        for (Exam exam : exams) {
+            entityManager.detach(exam);
+            exam.setExamQuestions(null);
+        }
+        return exams;
     }
 
     public List<ExamQuestion> getExamQuestions(Long examId) {
