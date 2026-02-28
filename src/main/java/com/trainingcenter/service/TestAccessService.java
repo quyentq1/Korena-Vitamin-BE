@@ -22,7 +22,13 @@ public class TestAccessService {
     private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
 
-    private static final int FREE_TEST_LIMIT = 5;
+    /**
+     * BUG-03 FIX: Giới hạn free test = 2 (cả Guest lẫn User chưa đóng tiền)
+     * - GUEST (chưa đăng nhập): 2 bài, tracking theo IP qua GuestAccessControl
+     * - USER đã đăng ký nhưng chưa đóng học phí: 2 bài, tracking theo userId
+     * - STUDENT (đã đóng học phí toàn khoá): UNLIMITED - bypass hoàn toàn
+     */
+    private static final int FREE_TEST_LIMIT = 2;
 
     /**
      * Check if user can take a free test
@@ -30,7 +36,7 @@ public class TestAccessService {
      */
     public boolean canTakeFreeTest(Long userId) {
         long freeTestCount = testAccessHistoryRepository
-            .countByUserIdAndAccessType(userId, TestAccessHistory.AccessType.FREE);
+                .countByUserIdAndAccessType(userId, TestAccessHistory.AccessType.FREE);
         return freeTestCount < FREE_TEST_LIMIT;
     }
 
@@ -39,7 +45,7 @@ public class TestAccessService {
      */
     public int getRemainingFreeTests(Long userId) {
         long usedFreeTests = testAccessHistoryRepository
-            .countByUserIdAndAccessType(userId, TestAccessHistory.AccessType.FREE);
+                .countByUserIdAndAccessType(userId, TestAccessHistory.AccessType.FREE);
         return Math.max(0, FREE_TEST_LIMIT - (int) usedFreeTests);
     }
 
@@ -54,7 +60,7 @@ public class TestAccessService {
         }
 
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new BadRequestException("User not found"));
+                .orElseThrow(() -> new BadRequestException("User not found"));
 
         Exam exam = new Exam();
         exam.setId(examId);
@@ -79,10 +85,10 @@ public class TestAccessService {
     @Transactional
     public TestAccessHistory recordPaidTestAccess(Long userId, Long examId, Long paymentId) {
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new BadRequestException("User not found"));
+                .orElseThrow(() -> new BadRequestException("User not found"));
 
         Payment payment = paymentRepository.findById(paymentId)
-            .orElseThrow(() -> new BadRequestException("Payment not found"));
+                .orElseThrow(() -> new BadRequestException("Payment not found"));
 
         if (payment.getStatus() != Payment.PaymentStatus.COMPLETED) {
             throw new BadRequestException("Payment not completed");
@@ -117,22 +123,21 @@ public class TestAccessService {
      */
     public TestStats getTestStats(Long userId) {
         long freeTests = testAccessHistoryRepository
-            .countByUserIdAndAccessType(userId, TestAccessHistory.AccessType.FREE);
+                .countByUserIdAndAccessType(userId, TestAccessHistory.AccessType.FREE);
         long paidTests = testAccessHistoryRepository
-            .countByUserIdAndAccessType(userId, TestAccessHistory.AccessType.PAID);
+                .countByUserIdAndAccessType(userId, TestAccessHistory.AccessType.PAID);
 
         return new TestStats(
-            (int) freeTests,
-            getRemainingFreeTests(userId),
-            (int) paidTests,
-            freeTests + paidTests
-        );
+                (int) freeTests,
+                getRemainingFreeTests(userId),
+                (int) paidTests,
+                freeTests + paidTests);
     }
 
     public record TestStats(
-        int usedFreeTests,
-        int remainingFreeTests,
-        int paidTests,
-        long totalTests
-    ) {}
+            int usedFreeTests,
+            int remainingFreeTests,
+            int paidTests,
+            long totalTests) {
+    }
 }
