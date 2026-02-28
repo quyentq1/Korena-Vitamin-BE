@@ -1,5 +1,6 @@
 package com.trainingcenter.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -24,10 +25,12 @@ public class Exam {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private Course course;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private User createdBy;
 
     @Enumerated(EnumType.STRING)
@@ -71,10 +74,10 @@ public class Exam {
     private LocalDateTime updatedAt;
 
     public enum ExamType {
-        FREE_PAID,      // Test Type 1: Free/Paid per test
-        UNLIMITED,      // Test Type 2: Unlimited for enrolled students
-        LESSON_QUIZ,    // Test Type 3: Quiz after each lesson
-        CERTIFICATE     // Certificate exams (TOPIK, OPIc, EPS_TOPIK)
+        FREE_PAID, // Test Type 1: Free/Paid per test
+        UNLIMITED, // Test Type 2: Unlimited for enrolled students
+        LESSON_QUIZ, // Test Type 3: Quiz after each lesson
+        CERTIFICATE // Certificate exams (TOPIK, OPIc, EPS_TOPIK)
     }
 
     public enum CertificateType {

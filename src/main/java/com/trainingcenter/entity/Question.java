@@ -1,5 +1,6 @@
 package com.trainingcenter.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -24,14 +25,17 @@ public class Question {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private QuestionCategory category;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pattern_id")
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private QuestionPattern pattern;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private User createdBy;
 
     @Enumerated(EnumType.STRING)

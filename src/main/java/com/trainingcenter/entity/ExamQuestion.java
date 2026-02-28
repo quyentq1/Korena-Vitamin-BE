@@ -1,5 +1,6 @@
 package com.trainingcenter.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,10 +19,12 @@ public class ExamQuestion {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exam_id", nullable = false)
+    @JsonIgnoreProperties({ "examQuestions", "hibernateLazyInitializer", "handler" })
     private Exam exam;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", nullable = false)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private Question question;
 
     @Column(name = "question_order", nullable = false)

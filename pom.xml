@@ -113,6 +113,12 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
         
+        <!-- Hibernate Jackson module to handle lazy proxies -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-hibernate6</artifactId>
+        </dependency>
+        
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
