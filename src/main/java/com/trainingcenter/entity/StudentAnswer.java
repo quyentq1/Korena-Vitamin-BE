@@ -1,5 +1,6 @@
 package com.trainingcenter.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,10 +23,12 @@ public class StudentAnswer {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "attempt_id", nullable = false)
+    @JsonIgnoreProperties({"answers", "exam", "student"})
     private ExamAttempt attempt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exam_question_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ExamQuestion examQuestion;
 
     @Column(name = "answer_text", columnDefinition = "TEXT")

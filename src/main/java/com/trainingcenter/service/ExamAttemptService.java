@@ -49,8 +49,14 @@ public class ExamAttemptService {
         // 1. Guest Logic (No Student ID)
         GuestAccessControl guestAccess = null; // track for post-save increment
         if (studentId == null) {
-            guestAccess = guestAccessRepository.findById(clientIp)
-                    .orElse(new GuestAccessControl(clientIp, 0, LocalDateTime.now()));
+            // Find existing guest access or create new one and save immediately
+            if (!guestAccessRepository.existsById(clientIp)) {
+                // Create new guest access record
+                guestAccess = new GuestAccessControl(clientIp, 0, LocalDateTime.now());
+                guestAccess = guestAccessRepository.save(guestAccess);
+            } else {
+                guestAccess = guestAccessRepository.findById(clientIp).get();
+            }
 
             if (guestAccess.getAttemptCount() >= 2) {
                 throw new BadRequestException(
@@ -85,9 +91,17 @@ public class ExamAttemptService {
             throw new BadRequestException("Exam is not published yet");
         }
 
-        // Check if student already has an in-progress attempt
+        // For GUEST users: Check if already completed this exam (no retake allowed)
+        if (student.getRole() == User.UserRole.GUEST) {
+            boolean hasCompleted = attemptRepository.hasCompletedAttempt(student.getId(), exam.getId());
+            if (hasCompleted) {
+                throw new BadRequestException("Bạn đã làm bài này rồi. Mỗi bài test chỉ được làm 1 lần.");
+            }
+        }
+
+        // Check if student already has an in-progress attempt (use IDs to avoid NonUniqueResultException)
         java.util.Optional<ExamAttempt> existingAttempt = attemptRepository.findByStudentAndExamAndStatus(
-                student, exam, ExamAttempt.AttemptStatus.IN_PROGRESS);
+                student.getId(), exam.getId(), ExamAttempt.AttemptStatus.IN_PROGRESS.name());
 
         if (existingAttempt.isPresent()) {
             if (student.getRole() == User.UserRole.GUEST) {
@@ -132,7 +146,8 @@ public class ExamAttemptService {
         // Increment guest attempt counter AFTER successful save
         if (guestAccess != null) {
             guestAccess.setAttemptCount(guestAccess.getAttemptCount() + 1);
-            entityManager.merge(guestAccess);
+            guestAccess.setLastAttemptAt(LocalDateTime.now());
+            guestAccessRepository.save(guestAccess);
         }
 
         return saved;
@@ -176,7 +191,14 @@ public class ExamAttemptService {
         // Auto-grade the attempt
         autoGradeAttempt(attempt);
 
-        return attemptRepository.save(attempt);
+        ExamAttempt saved = attemptRepository.save(attempt);
+
+        // Eagerly fetch answers with all details (question, options) for result display
+        // Without this, the LAZY fetch causes answers to be null in JSON response
+        List<StudentAnswer> answers = answerRepository.findByAttempt_Id(attemptId);
+        saved.setAnswers(answers);
+
+        return saved;
     }
 
     private void autoGradeAttempt(ExamAttempt attempt) {
