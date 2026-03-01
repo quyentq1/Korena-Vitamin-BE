@@ -67,6 +67,11 @@ public class SecurityConfig {
                         .requestMatchers("/public/**").permitAll()
                         .requestMatchers("/guest/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/courses/public/**").permitAll()
+                        // Course Preview & FAQ: Allow GET requests for guests
+                        .requestMatchers(HttpMethod.GET, "/lessons/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/faq/**").permitAll()
+                        // Search: Allow GET requests for guests
+                        .requestMatchers(HttpMethod.GET, "/search/**").permitAll()
                         // Role-guarded endpoints
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/staff/**").hasAnyRole("STAFF", "ADMIN")
