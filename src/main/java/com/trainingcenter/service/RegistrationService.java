@@ -33,6 +33,9 @@ public class RegistrationService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private EmailService emailService;
+
     public CourseRegistration createRegistration(CourseRegistration registration) {
         // Validate course exists
         Course course = courseRepository.findById(registration.getCourse().getId())
@@ -79,7 +82,8 @@ public class RegistrationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Registration not found with id: " + id));
     }
 
-    public User createStudentAccountFromRegistration(Long registrationId, String studentName, String email, String phone) {
+    public User createStudentAccountFromRegistration(Long registrationId, String studentName, String email,
+            String phone) {
         CourseRegistration registration = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Registration not found"));
 
@@ -119,10 +123,15 @@ public class RegistrationService {
         registration.setStatus(CourseRegistration.RegistrationStatus.COMPLETED);
         registrationRepository.save(registration);
 
-        // Note: In real application, you would send username and password to student via email
-        // For now, store it in notes
+        // Note: In real application, you would send username and password to student
+        // via email
+        // For now, store it in notes and also send via EmailService
         registration.setNotes("Username: " + username + ", Temporary Password: " + password);
         registrationRepository.save(registration);
+
+        if (email != null && !email.isEmpty()) {
+            emailService.sendAccountCreatedEmail(email, studentName, username, password);
+        }
 
         return student;
     }

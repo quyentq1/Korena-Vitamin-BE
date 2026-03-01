@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * Test Access Service
- * CRITICAL BUSINESS LOGIC: Manages 5 free tests limit and paid test access
+ * CRITICAL BUSINESS LOGIC: Manages 2 free tests limit and paid test access
  */
 @Service
 @RequiredArgsConstructor

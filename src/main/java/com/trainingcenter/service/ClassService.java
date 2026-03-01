@@ -163,6 +163,10 @@ public class ClassService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    public List<ClassStudent> getStudentClasses(Long studentId) {
+        return classStudentRepository.findByStudentId(studentId);
+    }
+
     public List<ClassTeacher> getClassTeachers(Long classId) {
         return classTeacherRepository.findByClassEntityId(classId);
     }

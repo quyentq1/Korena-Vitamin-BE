@@ -27,6 +27,16 @@ public class StudentController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private com.trainingcenter.service.ClassService classService;
+
+    // View My Classes
+    @GetMapping("/my-classes")
+    public ResponseEntity<List<ClassStudent>> getMyClasses(Authentication authentication) {
+        User student = userService.getUserByUsername(authentication.getName());
+        return ResponseEntity.ok(classService.getStudentClasses(student.getId()));
+    }
+
     // View Available Exams
     @GetMapping("/exams")
     public ResponseEntity<List<Exam>> getAvailableExams() {
@@ -51,6 +61,12 @@ public class StudentController {
         attempt.getExam().setExamQuestions(examService.getExamQuestions(id));
 
         return ResponseEntity.ok(attempt);
+    }
+
+    @GetMapping("/attempts/history")
+    public ResponseEntity<List<ExamAttempt>> getAttemptHistory(Authentication authentication) {
+        User student = userService.getUserByUsername(authentication.getName());
+        return ResponseEntity.ok(attemptService.getStudentAttempts(student.getId()));
     }
 
     @PostMapping("/attempts/{id}/answer")

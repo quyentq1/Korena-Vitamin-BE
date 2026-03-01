@@ -21,6 +21,9 @@ public class ConsultationController {
     @Autowired
     private ConsultationRequestRepository consultationRepository;
 
+    @Autowired
+    private com.trainingcenter.service.EmailService emailService;
+
     /**
      * POST /api/public/consultation
      * Public endpoint — không cần JWT token
@@ -40,6 +43,10 @@ public class ConsultationController {
         req.setStatus(ConsultationRequest.ConsultationStatus.NEW);
 
         ConsultationRequest saved = consultationRepository.save(req);
+
+        if (req.getEmail() != null && !req.getEmail().isEmpty()) {
+            emailService.sendWelcomeEmail(req.getEmail(), req.getFullName());
+        }
 
         return ResponseEntity.ok(Map.of(
                 "success", true,
